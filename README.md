@@ -39,5 +39,5 @@ After flashing, you can confirm the script worked safely by checking:
 ![TWRP Success 2](screenshots/success_2.png)
 
 ## Credits
-Original concept from the Motorola copy-partitions script. 
-Modified, audited, and verified for Samsung Galaxy A55 compatibility.
+- Original script by [betaxab/copypartitions](https://github.com/betaxab/copypartitions).
+- Audited, modified, and verified for Samsung Galaxy A55 compatibility by this project.
