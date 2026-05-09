@@ -21,7 +21,7 @@ Samsung devices are particularly sensitive to bootloader version mismatches. Thi
 - **Config**: `optics_a/b`, `prism_a/b`.
 
 ## How to use
-1. Compress the `META-INF` folder and `README.md` into a ZIP file.
+1. Download the latest flashable ZIP from the [Releases](https://github.com/simplehima/Samsung-AB-Slot-Syncer-SM-A556E/releases) section.
 2. Boot into custom recovery (TWRP/OrangeFox).
 3. Flash the ZIP.
 4. Verify the summary in the recovery log.
