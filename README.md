@@ -35,6 +35,9 @@ After flashing, you can confirm the script worked safely by checking:
 ## Tested Devices
 - **Samsung Galaxy A55 5G (SM-A556E)**: ✅ Confirmed working (Firmware, Modem, and Vendor_Boot synced successfully).
 
+![TWRP Success 1](screenshots/success_1.png)
+![TWRP Success 2](screenshots/success_2.png)
+
 ## Credits
 Original concept from the Motorola copy-partitions script. 
 Modified, audited, and verified for Samsung Galaxy A55 compatibility.
