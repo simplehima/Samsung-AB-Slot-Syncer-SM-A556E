@@ -26,6 +26,15 @@ Samsung devices are particularly sensitive to bootloader version mismatches. Thi
 3. Flash the ZIP.
 4. Verify the summary in the recovery log.
 
+## Verification & Safety
+After flashing, you can confirm the script worked safely by checking:
+1. **IMEI**: Dial `*#06#`. If your IMEIs are intact, the security partitions remained untouched.
+2. **Baseband**: Check *Settings > About Phone > Software Information*. A valid Baseband version confirms the modem firmware was synced correctly.
+3. **Recovery Logs**: The script provides a summary (e.g., "Copied: 15 partitions, Errors: 0"). Ensure errors are 0 before switching slots.
+
+## Tested Devices
+- **Samsung Galaxy A55 5G (SM-A556E)**: ✅ Confirmed working (Firmware, Modem, and Vendor_Boot synced successfully).
+
 ## Credits
 Original concept from the Motorola copy-partitions script. 
-Modified and audited for Samsung Galaxy A55 compatibility.
+Modified, audited, and verified for Samsung Galaxy A55 compatibility.
