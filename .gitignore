@@ -1,0 +1,4 @@
+*.zip
+*.img
+META-INF/com/android/
+!Samsung-A55-Copy-Partitions.zip
