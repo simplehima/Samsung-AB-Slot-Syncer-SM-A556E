@@ -1,0 +1,162 @@
+#!/sbin/sh
+
+#####################################################
+# Flashize Runtime (2016-04-06)                     #
+# Copyright 2016, Lanchon                           #
+#####################################################
+
+#####################################################
+# The Flashize Runtime is free software licensed    #
+# under GNU's Lesser General Public License (LGPL)  #
+# version 3 and any later version.                  #
+# ------------------------------------------------- #
+# Note: The code appended to the Flashize Runtime,  #
+# if any, is independently licensed.                #
+#####################################################
+
+if [ "$1" != "lanchon-magic" ]; then
+    export FLASHIZE_VERSION='2016-04-06'
+    log=''
+    if [ -f /tmp/flashize-log ]; then
+        log="$(cat /tmp/flashize-log)"
+        if [ -z "$log" ]; then
+            log=/tmp/flashize.log
+        fi
+    fi
+    if [ "$log" == "-" ]; then
+        log=""
+    fi
+    out="/proc/self/fd/$2"
+    zip="$3"
+    if [ -n "$log" ]; then
+        if [ "${log::1}" != "/" ]; then
+            logzip="$zip"
+            if [ "$logzip" == "/tmp/update.zip" ] || [ "$logzip" == "/sideload/package.zip" ]; then
+                # if sideloading, for relative logfile naming purposes pretend that the zip is:
+                logzip=/tmp/flashize.zip
+            fi
+            if [ "$log" == ":" ]; then
+                log="$(basename "$logzip" .zip).log"
+            fi
+            log="$(dirname "$logzip")/$log"
+        fi
+        mkdir -p "$(dirname "$log")"
+    fi
+    print() {
+        local s="$1"
+        if [ -n "$log" ]; then
+            >>"$log" echo "$s"
+        fi
+        if [ -z "$s" ]; then s=" "; fi
+        >$out echo "ui_print $s"
+        >$out echo "ui_print"
+    }
+    print
+    if [ -n "$log" ]; then
+        >"$log"
+    fi
+    set -o pipefail
+    /sbin/sh "$0" "lanchon-magic" "$zip" 2>&1 | (
+        IFS=""
+        while read -r line; do print "$line"; done
+    )
+    code=$?
+    print
+    if [ "$code" -eq "0" ]; then
+        print "[OK]";
+    else
+        print "[ERROR $code]";
+    fi
+    log=""
+    print
+    exit $code
+fi
+shift
+[ ! -f /tmp/flashize-debug ] || set -x
+
+#####################################################
+
+# Partitions to SKIP (managed by ROM flash or are system partitions)
+IGNORED=" boot_a boot_b init_boot_a init_boot_b dtbo_a dtbo_b system_a system_b vendor_a vendor_b vbmeta_a vbmeta_b vbmeta_system_a vbmeta_system_b super_a super_b userdata metadata "
+
+# Samsung-specific partitions that must NEVER be touched (even if they were A/B)
+NEVER_TOUCH=" efs_a efs_b sec_efs_a sec_efs_b persist_a persist_b steady_a steady_b "
+
+suffix_active=$(getprop ro.boot.slot_suffix)
+if [ -z "$suffix_active" ]; then
+    echo "ERROR: Could not detect active slot. Is this an A/B device?"
+    exit 1
+fi
+
+if [ "$suffix_active" = "_a" ]; then
+    suffix_swap="_b"
+elif [ "$suffix_active" = "_b" ]; then
+    suffix_swap="_a"
+else
+    echo "ERROR: Unexpected slot suffix: $suffix_active"
+    exit 1
+fi
+
+echo "Active slot: $suffix_active"
+echo "Inactive slot: $suffix_swap"
+echo ""
+
+copied=0
+skipped=0
+errors=0
+
+for active in /dev/block/by-name/*"$suffix_active"; do
+    partition=$(basename "$active")
+
+    # Skip if in IGNORED list
+    if echo " $IGNORED " | grep -q " ${partition} "; then
+        echo "SKIP (ignored): $partition"
+        skipped=$((skipped + 1))
+        continue
+    fi
+
+    # NEVER touch EFS/calibration partitions
+    if echo " $NEVER_TOUCH " | grep -q " ${partition} "; then
+        echo "SKIP (protected): $partition"
+        skipped=$((skipped + 1))
+        continue
+    fi
+
+    inactive=$(echo "$active" | sed "s/${suffix_active}\$/${suffix_swap}/")
+    part_active=$(readlink -fn "$active")
+    part_inactive=$(readlink -fn "$inactive")
+
+    # Validate both symlinks resolve to real block devices
+    if [ -z "$part_active" ] || [ -z "$part_inactive" ]; then
+        echo "SKIP (no block device): $partition"
+        skipped=$((skipped + 1))
+        continue
+    fi
+
+    if [ "$active" = "$part_active" ] || [ "$inactive" = "$part_inactive" ]; then
+        echo "SKIP (not a symlink): $partition"
+        skipped=$((skipped + 1))
+        continue
+    fi
+
+    # Perform the copy with proper block size and sync
+    echo "COPY: $partition ($part_active -> $part_inactive)"
+    if dd if="$part_active" of="$part_inactive" bs=1M conv=fsync 2>/dev/null; then
+        copied=$((copied + 1))
+    else
+        echo "ERROR: Failed to copy $partition!"
+        errors=$((errors + 1))
+    fi
+done
+
+echo ""
+echo "=== Summary ==="
+echo "Copied:  $copied partitions"
+echo "Skipped: $skipped partitions"
+echo "Errors:  $errors partitions"
+
+if [ "$errors" -gt 0 ]; then
+    echo ""
+    echo "WARNING: Some partitions failed to copy!"
+    exit 1
+fi
